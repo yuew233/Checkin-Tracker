@@ -24,6 +24,8 @@ let holidays = new Set();
 let lastRenderedDate = "";
 let currentTab = "home";
 let selectedChartDate = null;
+let viewYear = null; // viewed month on the history tab (defaults to the current month)
+let viewMonth0 = null;
 
 const TABS = ["home", "history", "settings"];
 const CHART_MAX_HOURS = 12; // fixed bar-chart scale, hours
@@ -107,6 +109,60 @@ function goTab(tab) {
 }
 
 // ---------------------------------------------------------------------------
+// Viewed month on the history tab (defaults to the current month)
+// ---------------------------------------------------------------------------
+
+function isCurrentViewMonth() {
+  const now = new Date();
+  return viewYear === now.getFullYear() && viewMonth0 === now.getMonth();
+}
+
+function monthYearLabel(year, month0) {
+  if (lang === "zh") return `${year}年${month0 + 1}月`;
+  return `${strings.monthNames[month0]} ${year}`;
+}
+
+/** Switch the history tab to another month; future months clamp to the current month. */
+export function setViewMonth(year, month0) {
+  const now = new Date();
+  let target = new Date(year, month0, 1);
+  const cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (target > cur) target = cur;
+  viewYear = target.getFullYear();
+  viewMonth0 = target.getMonth();
+  holidays = holidaySetAround(viewYear);
+  selectedChartDate = null; // renderChart picks a default for the new month
+  renderHistoryTab();
+}
+
+export function viewMonth() {
+  return { year: viewYear, month0: viewMonth0 };
+}
+
+function stepViewMonth(delta) {
+  setViewMonth(viewYear, viewMonth0 + delta);
+}
+
+function renderMonthNav() {
+  $("monthLabelBtn").textContent = monthYearLabel(viewYear, viewMonth0);
+  $("monthNext").disabled = isCurrentViewMonth();
+  $("backToCurrentBtn").hidden = isCurrentViewMonth();
+  const picker = $("monthPicker");
+  picker.value = `${viewYear}-${pad2(viewMonth0 + 1)}`;
+  const now = new Date();
+  picker.max = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+}
+
+/** Re-render everything on the history tab for the viewed month. */
+function renderHistoryTab() {
+  renderMonthNav();
+  renderStats();
+  renderForecast();
+  renderChart();
+  renderHistory();
+}
+
+// ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
 
@@ -173,9 +229,8 @@ function renderPunch() {
 }
 
 function renderStats() {
-  const now = new Date();
-  const stats = monthStats(doc.days, now.getFullYear(), now.getMonth());
-  $("monthLabel").textContent = `${monthLabel(now)} · ${t("monthAvg")}`;
+  const stats = monthStats(doc.days, viewYear, viewMonth0);
+  $("monthLabel").textContent = `${monthLabel(new Date(viewYear, viewMonth0, 1))} · ${t("monthAvg")}`;
   $("monthAvgValue").textContent =
     stats.completedDays > 0 ? (stats.completedHours / stats.completedDays).toFixed(1) : "0.0";
   $("monthAvgUnit").textContent = unit();
@@ -192,6 +247,13 @@ function remainingInfo() {
 }
 
 function renderForecast() {
+  const card = $("forecastCard");
+  // The forecast only makes sense for the current month.
+  if (!isCurrentViewMonth()) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
   const now = new Date();
   const stats = monthStats(doc.days, now.getFullYear(), now.getMonth());
   const info = remainingInfo();
@@ -277,7 +339,11 @@ function dayCard(day) {
 function renderHistory() {
   const list = $("historyList");
   list.innerHTML = "";
-  const sorted = [...doc.days].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const inMonth = doc.days.filter((d) => {
+    const dd = parseDateKey(d.date);
+    return dd.getFullYear() === viewYear && dd.getMonth() === viewMonth0;
+  });
+  const sorted = [...inMonth].sort((a, b) => (a.date < b.date ? 1 : -1));
   if (sorted.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-note";
@@ -305,21 +371,43 @@ function renderTodayRecord() {
   card.hidden = false;
 }
 
-/** Bar chart of daily hours for the current month (one bar per workday). */
+/** Bar chart of daily hours for the viewed month (one bar per workday). */
 function renderChart() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month0 = now.getMonth();
-  $("chartTitle").textContent = `${monthLabel(now)} · ${t("chartTitle")}`;
+  const year = viewYear;
+  const month0 = viewMonth0;
+  $("chartTitle").textContent = `${monthLabel(new Date(year, month0, 1))} · ${t("chartTitle")}`;
 
-  const today = dateKey(now);
-  if (!selectedChartDate || parseDateKey(selectedChartDate).getMonth() !== month0) {
-    selectedChartDate = today;
+  const today = dateKey(new Date());
+  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+  const sel = selectedChartDate ? parseDateKey(selectedChartDate) : null;
+  if (!sel || sel.getFullYear() !== year || sel.getMonth() !== month0) {
+    // Default detail: latest completed day in this month; else today if it
+    // is in this month; else the month's first workday.
+    const done = doc.days
+      .filter((d) => {
+        const dd = parseDateKey(d.date);
+        return dd.getFullYear() === year && dd.getMonth() === month0 && d.clockOut;
+      })
+      .map((d) => d.date)
+      .sort();
+    if (done.length) {
+      selectedChartDate = done[done.length - 1];
+    } else if (isCurrentViewMonth()) {
+      selectedChartDate = today;
+    } else {
+      selectedChartDate = today;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(year, month0, d);
+        if (isWorkday(dt, holidays)) {
+          selectedChartDate = dateKey(dt);
+          break;
+        }
+      }
+    }
   }
 
   const bars = $("chartBars");
   bars.innerHTML = "";
-  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month0, d);
     if (!isWorkday(date, holidays)) continue;
@@ -373,10 +461,7 @@ function renderAll() {
   lastRenderedDate = dateKey(new Date());
   renderPunch();
   renderTodayRecord();
-  renderStats();
-  renderForecast();
-  renderChart();
-  renderHistory();
+  renderHistoryTab();
 }
 
 // ---------------------------------------------------------------------------
@@ -460,6 +545,10 @@ async function saveDayDialog() {
   doc.days.sort((a, b) => (a.date < b.date ? -1 : 1));
   await saveDoc(doc);
   closeDayDialog();
+  const saved = parseDateKey(date);
+  if (saved.getFullYear() !== viewYear || saved.getMonth() !== viewMonth0) {
+    setViewMonth(saved.getFullYear(), saved.getMonth()); // jump to the saved month
+  }
   renderAll();
 }
 
@@ -578,6 +667,18 @@ function wireEvents() {
       renderChart();
     }
   });
+  $("monthPrev").addEventListener("click", () => stepViewMonth(-1));
+  $("monthNext").addEventListener("click", () => stepViewMonth(1));
+  $("backToCurrentBtn").addEventListener("click", () => {
+    const n = new Date();
+    setViewMonth(n.getFullYear(), n.getMonth());
+  });
+  $("monthPicker").addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (!/^\d{4}-\d{2}$/.test(v)) return;
+    const [y, m] = v.split("-").map(Number);
+    setViewMonth(y, m - 1);
+  });
   $("addDayBtn").addEventListener("click", () => openDayDialog(null));
   $("dialogForm").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -631,6 +732,9 @@ async function init() {
   lang = storedLang === "en" ? "en" : "zh";
   doc = await loadDoc();
   holidays = holidaySetAround(new Date().getFullYear());
+  const now = new Date();
+  viewYear = now.getFullYear();
+  viewMonth0 = now.getMonth();
   applyI18n();
   wireEvents();
   route(); // open the tab named by the URL hash (default #home)
