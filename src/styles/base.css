@@ -1,0 +1,61 @@
+/* base.css — tokens + reset. */
+
+:root {
+  --page-bg: #eef0f2;
+  --card-bg: #ffffff;
+  --border: #e3e6ea;
+  --text: #1c2530;
+  --muted: #6b7684;
+  --navy: #16324f;
+  --navy-soft: #e8eef4;
+  --red: #d64541;
+  --red-dark: #b93632;
+  --green: #2fa866;
+  --green-dark: #248552;
+  --radius: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+a {
+  color: var(--navy);
+}
