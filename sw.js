@@ -6,7 +6,7 @@
 //
 // Bump CACHE_NAME on every release that changes shipped files.
 
-const CACHE_NAME = "clock-in-v6";
+const CACHE_NAME = "clock-in-v7";
 
 const APP_SHELL = [
   "./",

@@ -8,7 +8,6 @@ import {
   floorHHMM,
   durationMinutes,
   hoursDecimal,
-  holidaySetAround,
   autoRemainingDays,
   monthStats,
   forecastRequired,
@@ -19,7 +18,6 @@ import { getStrings } from "./i18n.js";
 let doc = null;
 let lang = "zh";
 let strings = getStrings("zh");
-let holidays = new Set();
 let lastRenderedDate = "";
 let currentTab = "home";
 let selectedChartDate = null;
@@ -130,7 +128,6 @@ export function setViewMonth(year, month0) {
   if (target > cur) target = cur;
   viewYear = target.getFullYear();
   viewMonth0 = target.getMonth();
-  holidays = holidaySetAround(viewYear);
   selectedChartDate = null; // renderChart picks a default for the new month
   renderHistoryTab();
 }
@@ -223,21 +220,27 @@ function renderPunch() {
   const open = openShift();
   const today = todayRecord();
   const btn = $("punchBtn");
+  const label = $("punchText");
+  const clock = $("punchClock");
 
   $("todayLabel").textContent = `${t("today")} · ${formatDayDate(now)}`;
 
   if (open) {
-    btn.textContent = t("punchOut");
-    btn.className = "punch-btn punch-out";
+    label.textContent = t("punchOut");
+    btn.className = "punch-btn punch-out has-clock";
     btn.disabled = false;
+    clock.hidden = false;
+    updateClockHands(now);
   } else if (today && today.clockOut) {
-    btn.textContent = t("doneToday");
+    label.textContent = t("doneToday");
     btn.className = "punch-btn punch-done";
     btn.disabled = true;
+    clock.hidden = true;
   } else {
-    btn.textContent = t("punchIn");
+    label.textContent = t("punchIn");
     btn.className = "punch-btn punch-in";
     btn.disabled = false;
+    clock.hidden = true;
   }
 
   const line = $("ongoingLine");
@@ -282,7 +285,7 @@ function renderStats() {
 function remainingInfo() {
   const now = new Date();
   const mk = monthKey(now);
-  const auto = autoRemainingDays(now, holidays);
+  const auto = autoRemainingDays(now);
   const override = doc.overrides[mk];
   const current = override === null || override === undefined ? auto : override;
   return { auto, override, current, monthKey: mk };
@@ -407,7 +410,7 @@ function renderTodayRecord() {
   card.hidden = false;
 }
 
-/** Bar chart of daily hours for the selected range; weekends show as 0, holidays omitted. */
+/** Bar chart of daily hours for the selected range; weekends show as 0. */
 function renderChart() {
   const { start, end } = rangeDays();
   $("chartTitle").textContent = `${rangeLabel()} · ${t("chartTitle")}`;
@@ -436,7 +439,6 @@ function renderChart() {
   bars.innerHTML = "";
   let selColEl = null;
   for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
-    if (holidays.has(dateKey(dt))) continue; // federal holidays stay omitted
     const key = dateKey(dt);
     const rec = doc.days.find((x) => x.date === key);
     let hours = null;
@@ -520,6 +522,45 @@ function renderAll() {
 }
 
 // ---------------------------------------------------------------------------
+// Punch-button analog clock (shown while clocked in; the second hand moves
+// every second).
+// ---------------------------------------------------------------------------
+
+/** Rotate the punch-button clock hands to the current time. */
+function updateClockHands(now) {
+  const clock = $("punchClock");
+  if (!clock || clock.hidden) return;
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  const min = now.getMinutes() + sec / 60;
+  const hour = (now.getHours() % 12) + min / 60;
+  const set = (id, deg) => {
+    const el = $(id);
+    if (el) el.setAttribute("transform", `rotate(${deg} 50 50)`);
+  };
+  set("clockSecHand", sec * 6);
+  set("clockMinHand", min * 6);
+  set("clockHourHand", hour * 30);
+}
+
+/** Draw the 12 tick marks on the punch-button clock face. */
+function buildClockTicks() {
+  if (typeof document.createElementNS !== "function") return;
+  const g = $("clockTicks");
+  if (!g) return;
+  const NS = "http://www.w3.org/2000/svg";
+  for (let i = 0; i < 12; i++) {
+    const a = (i * 30 * Math.PI) / 180;
+    const r1 = i % 3 === 0 ? 38 : 40.5;
+    const line = document.createElementNS(NS, "line");
+    line.setAttribute("x1", String(50 + r1 * Math.sin(a)));
+    line.setAttribute("y1", String(50 - r1 * Math.cos(a)));
+    line.setAttribute("x2", String(50 + 44 * Math.sin(a)));
+    line.setAttribute("y2", String(50 - 44 * Math.cos(a)));
+    g.appendChild(line);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Ticking clock (every second) — updates only the clock + elapsed value.
 // ---------------------------------------------------------------------------
 
@@ -529,6 +570,7 @@ function tick() {
   if (clock) {
     clock.textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
   }
+  updateClockHands(now);
   const elapsed = $("elapsedValue");
   const open = openShift();
   if (elapsed && open) {
@@ -790,12 +832,12 @@ async function init() {
   })();
   lang = storedLang === "en" ? "en" : "zh";
   doc = await loadDoc();
-  holidays = holidaySetAround(new Date().getFullYear());
   const now = new Date();
   viewYear = now.getFullYear();
   viewMonth0 = now.getMonth();
   applyI18n();
   wireEvents();
+  buildClockTicks();
   route(); // open the tab named by the URL hash (default #home)
   renderAll();
   setInterval(tick, 1000);

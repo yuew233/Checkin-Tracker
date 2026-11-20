@@ -73,84 +73,32 @@ export function roundToQuarter(hours) {
 }
 
 // ---------------------------------------------------------------------------
-// US federal holidays (with observed-day shifting: Sat -> preceding Fri,
-// Sun -> following Mon). Generated for a range of years so cross-year
-// observed days (e.g. Dec 31 / Jan 2) are covered.
+// Remaining workdays — weekdays only (Mon–Fri). No holiday handling:
+// the user manages holidays himself.
 // ---------------------------------------------------------------------------
 
-function nthWeekday(year, month0, weekday, n) {
-  const first = new Date(year, month0, 1);
-  const delta = (weekday - first.getDay() + 7) % 7;
-  return new Date(year, month0, 1 + delta + (n - 1) * 7);
-}
-
-function lastWeekday(year, month0, weekday) {
-  const last = new Date(year, month0 + 1, 0);
-  const delta = (last.getDay() - weekday + 7) % 7;
-  return new Date(year, month0 + 1, 0 - delta);
-}
-
-function observed(date) {
-  const d = new Date(date);
-  if (d.getDay() === 6) d.setDate(d.getDate() - 1);
-  else if (d.getDay() === 0) d.setDate(d.getDate() + 1);
-  return d;
-}
-
-/** The 11 US federal holidays for one year, as a Set of "YYYY-MM-DD" (observed dates). */
-export function federalHolidays(year) {
-  const days = [
-    observed(new Date(year, 0, 1)), // New Year's Day
-    nthWeekday(year, 0, 1, 3), // MLK Day — 3rd Mon of Jan
-    nthWeekday(year, 1, 1, 3), // Presidents Day — 3rd Mon of Feb
-    lastWeekday(year, 4, 1), // Memorial Day — last Mon of May
-    observed(new Date(year, 5, 19)), // Juneteenth
-    observed(new Date(year, 6, 4)), // Independence Day
-    nthWeekday(year, 8, 1, 1), // Labor Day — 1st Mon of Sep
-    nthWeekday(year, 9, 1, 2), // Columbus Day — 2nd Mon of Oct
-    observed(new Date(year, 10, 11)), // Veterans Day
-    nthWeekday(year, 10, 4, 4), // Thanksgiving — 4th Thu of Nov
-    observed(new Date(year, 11, 25)), // Christmas Day
-  ];
-  return new Set(days.map(dateKey));
-}
-
-/** Holidays for year-1, year and year+1, so observed days crossing a year boundary are included. */
-export function holidaySetAround(year) {
-  const set = new Set();
-  for (const y of [year - 1, year, year + 1]) {
-    for (const d of federalHolidays(y)) set.add(d);
-  }
-  return set;
-}
-
-export function isWorkday(date, holidays) {
-  const dow = date.getDay();
-  if (dow === 0 || dow === 6) return false;
-  return !holidays.has(dateKey(date));
-}
-
-/** Count workdays from start to end inclusive (Mon–Fri, excluding holidays). */
-export function countWorkdays(start, end, holidays) {
+/** Count weekdays (Mon–Fri) from start to end inclusive. */
+export function countWorkdays(start, end) {
   let count = 0;
   const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
   while (d <= last) {
-    if (isWorkday(d, holidays)) count += 1;
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count += 1;
     d.setDate(d.getDate() + 1);
   }
   return count;
 }
 
 /**
- * Auto remaining workdays: weekdays from TOMORROW through month-end,
- * excluding US federal holidays. Today is never counted.
+ * Auto remaining workdays: weekdays from TOMORROW through month-end.
+ * Today is never counted.
  */
-export function autoRemainingDays(today, holidays) {
+export function autoRemainingDays(today) {
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   if (tomorrow > monthEnd) return 0;
-  return countWorkdays(tomorrow, monthEnd, holidays);
+  return countWorkdays(tomorrow, monthEnd);
 }
 
 /** Completed days in a calendar month. In-progress (open) shifts are excluded. */
