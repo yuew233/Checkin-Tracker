@@ -434,6 +434,7 @@ function renderChart() {
 
   const bars = $("chartBars");
   bars.innerHTML = "";
+  let selColEl = null;
   for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
     if (holidays.has(dateKey(dt))) continue; // federal holidays stay omitted
     const key = dateKey(dt);
@@ -462,6 +463,30 @@ function renderChart() {
     label.textContent = String(dt.getDate());
     col.append(area, label);
     bars.append(col);
+    if (key === selectedChartDate) selColEl = col;
+  }
+
+  // Dynamic width: every column keeps a 20px floor (matching the
+  // .chart-col flex-basis) so the day-number labels never overflow
+  // their column; the scroller handles the rest — a week fits, a
+  // month / all scrolls. min-width: 100% in CSS lets short ranges
+  // stretch to fill the card.
+  const count = bars.children.length;
+  bars.style.width = count > 0 ? `${count * 20 + (count - 1) * 2}px` : "";
+
+  // Keep the selected bar visible inside the scroller.
+  const scroller = $("chartScroll");
+  if (
+    scroller &&
+    selColEl &&
+    typeof selColEl.offsetLeft === "number" &&
+    typeof scroller.scrollLeft === "number"
+  ) {
+    const left = selColEl.offsetLeft;
+    const right = left + selColEl.offsetWidth;
+    if (left < scroller.scrollLeft) scroller.scrollLeft = left;
+    else if (right > scroller.scrollLeft + scroller.clientWidth)
+      scroller.scrollLeft = right - scroller.clientWidth;
   }
 
   // Detail line for the tapped (or default) bar.
