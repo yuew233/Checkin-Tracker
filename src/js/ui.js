@@ -12,6 +12,7 @@ import {
   autoRemainingDays,
   monthStats,
   forecastRequired,
+  isWorkday,
 } from "./domain.js";
 import { loadDoc, saveDoc, exportJSON, parseBackup, mergeDocs, LANG_KEY } from "./state.js";
 import { getStrings } from "./i18n.js";
@@ -21,6 +22,11 @@ let lang = "zh";
 let strings = getStrings("zh");
 let holidays = new Set();
 let lastRenderedDate = "";
+let currentTab = "home";
+let selectedChartDate = null;
+
+const TABS = ["home", "history", "settings"];
+const CHART_MAX_HOURS = 12; // fixed bar-chart scale, hours
 
 const $ = (id) => document.getElementById(id);
 
@@ -62,6 +68,42 @@ function openShift() {
 function nowHHMM() {
   const now = new Date();
   return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+}
+
+// ---------------------------------------------------------------------------
+// Tabs + hash routing (#home / #history / #settings)
+// ---------------------------------------------------------------------------
+
+/** Map a location hash to a tab id; anything unknown falls back to "home". */
+export function tabFromHash(hash) {
+  const h = String(hash || "").replace(/^#/, "");
+  return TABS.includes(h) ? h : "home";
+}
+
+export function showTab(tab) {
+  if (!TABS.includes(tab)) tab = "home";
+  currentTab = tab;
+  for (const name of TABS) {
+    const view = $(`view-${name}`);
+    if (view) view.classList.toggle("active", name === tab);
+  }
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+  window.scrollTo(0, 0);
+}
+
+export function route() {
+  const tab = tabFromHash(location.hash);
+  if (tab !== currentTab) showTab(tab);
+}
+
+function goTab(tab) {
+  if (!TABS.includes(tab)) tab = "home";
+  if (`#${tab}` !== location.hash) {
+    location.hash = `#${tab}`; // hashchange event drives showTab
+  }
+  route();
 }
 
 // ---------------------------------------------------------------------------
@@ -246,11 +288,94 @@ function renderHistory() {
   for (const day of sorted) list.append(dayCard(day));
 }
 
+/** Today's completed record on the punch tab (hidden until today is done). */
+function renderTodayRecord() {
+  const card = $("todayRecordCard");
+  const today = todayRecord();
+  if (!today || !today.clockOut) {
+    card.hidden = true;
+    return;
+  }
+  const date = parseDateKey(today.date);
+  $("todayRecordDate").textContent = formatDayDate(date);
+  const dur = durationMinutes(today.clockIn, today.clockOut);
+  $("todayRecordHours").textContent = dur === null ? "—" : hoursText(dur);
+  $("todayRecordTimes").textContent =
+    `${floorHHMM(today.clockIn) ?? today.clockIn} – ${floorHHMM(today.clockOut) ?? today.clockOut}`;
+  card.hidden = false;
+}
+
+/** Bar chart of daily hours for the current month (one bar per workday). */
+function renderChart() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month0 = now.getMonth();
+  $("chartTitle").textContent = `${monthLabel(now)} · ${t("chartTitle")}`;
+
+  const today = dateKey(now);
+  if (!selectedChartDate || parseDateKey(selectedChartDate).getMonth() !== month0) {
+    selectedChartDate = today;
+  }
+
+  const bars = $("chartBars");
+  bars.innerHTML = "";
+  const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month0, d);
+    if (!isWorkday(date, holidays)) continue;
+    const key = dateKey(date);
+    const rec = doc.days.find((x) => x.date === key);
+    let hours = null;
+    if (rec && rec.clockOut) {
+      const dur = durationMinutes(rec.clockIn, rec.clockOut);
+      if (dur !== null) hours = hoursDecimal(dur);
+    }
+
+    const col = document.createElement("div");
+    col.className = "chart-col";
+    col.dataset.date = key;
+    const area = document.createElement("div");
+    area.className = "chart-bar-area";
+    const bar = document.createElement("div");
+    bar.className = "chart-bar" + (hours === null ? " empty" : "");
+    if (key === today) bar.classList.add("today");
+    if (key === selectedChartDate) bar.classList.add("selected");
+    bar.style.height =
+      hours === null ? "2px" : `${Math.min(100, (hours / CHART_MAX_HOURS) * 100)}%`;
+    area.append(bar);
+    const label = document.createElement("div");
+    label.className = "chart-label" + (key === today ? " today" : "");
+    label.textContent = String(d);
+    col.append(area, label);
+    bars.append(col);
+  }
+
+  // Detail line for the tapped (or today's) bar.
+  const detail = $("chartDetail");
+  const selDate = parseDateKey(selectedChartDate);
+  const selRec = doc.days.find((x) => x.date === selectedChartDate);
+  if (selRec) {
+    const inF = floorHHMM(selRec.clockIn) ?? selRec.clockIn;
+    if (selRec.clockOut) {
+      const dur = durationMinutes(selRec.clockIn, selRec.clockOut);
+      const outF = floorHHMM(selRec.clockOut) ?? selRec.clockOut;
+      detail.textContent =
+        `${formatDayDate(selDate)} · ${inF} – ${outF} · ${dur === null ? "—" : hoursText(dur)}`;
+    } else {
+      detail.textContent = `${formatDayDate(selDate)} · ${inF} – ${t("inProgress")}`;
+    }
+  } else {
+    detail.textContent = `${formatDayDate(selDate)} · ${t("chartNoRecord")}`;
+  }
+}
+
 function renderAll() {
   lastRenderedDate = dateKey(new Date());
   renderPunch();
+  renderTodayRecord();
   renderStats();
   renderForecast();
+  renderChart();
   renderHistory();
 }
 
@@ -442,6 +567,17 @@ function showToast(msg) {
 
 function wireEvents() {
   $("punchBtn").addEventListener("click", onPunch);
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => goTab(btn.dataset.tab));
+  });
+  window.addEventListener("hashchange", route);
+  $("chartBars").addEventListener("click", (e) => {
+    const col = e.target.closest ? e.target.closest(".chart-col") : null;
+    if (col && col.dataset.date) {
+      selectedChartDate = col.dataset.date;
+      renderChart();
+    }
+  });
   $("addDayBtn").addEventListener("click", () => openDayDialog(null));
   $("dialogForm").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -497,6 +633,7 @@ async function init() {
   holidays = holidaySetAround(new Date().getFullYear());
   applyI18n();
   wireEvents();
+  route(); // open the tab named by the URL hash (default #home)
   renderAll();
   setInterval(tick, 1000);
   tick();
@@ -509,4 +646,8 @@ async function init() {
   }
 }
 
-init();
+// Only auto-start in a browser; importing this module in node (for tests)
+// must not touch the DOM.
+if (typeof document !== "undefined") {
+  init();
+}
