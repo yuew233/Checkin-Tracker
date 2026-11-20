@@ -221,26 +221,26 @@ function renderPunch() {
   const today = todayRecord();
   const btn = $("punchBtn");
   const label = $("punchText");
-  const clock = $("punchClock");
+  const elapsed = $("elapsedTime");
 
   $("todayLabel").textContent = `${t("today")} · ${formatDayDate(now)}`;
 
   if (open) {
     label.textContent = t("punchOut");
-    btn.className = "punch-btn punch-out has-clock";
+    btn.className = "punch-btn punch-out has-elapsed";
     btn.disabled = false;
-    clock.hidden = false;
-    updateClockHands(now);
+    elapsed.style.display = "block";
+    updateElapsedTime(now);
   } else if (today && today.clockOut) {
     label.textContent = t("doneToday");
     btn.className = "punch-btn punch-done";
     btn.disabled = true;
-    clock.hidden = true;
+    elapsed.style.display = "none";
   } else {
     label.textContent = t("punchIn");
     btn.className = "punch-btn punch-in";
     btn.disabled = false;
-    clock.hidden = true;
+    elapsed.style.display = "none";
   }
 
   const line = $("ongoingLine");
@@ -522,42 +522,33 @@ function renderAll() {
 }
 
 // ---------------------------------------------------------------------------
-// Punch-button analog clock (shown while clocked in; the second hand moves
-// every second).
+// Punch-button elapsed timer (shown while clocked in; ticks every second).
 // ---------------------------------------------------------------------------
 
-/** Rotate the punch-button clock hands to the current time. */
-function updateClockHands(now) {
-  const clock = $("punchClock");
-  if (!clock || clock.hidden) return;
-  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
-  const min = now.getMinutes() + sec / 60;
-  const hour = (now.getHours() % 12) + min / 60;
-  const set = (id, deg) => {
-    const el = $(id);
-    if (el) el.setAttribute("transform", `rotate(${deg} 50 50)`);
-  };
-  set("clockSecHand", sec * 6);
-  set("clockMinHand", min * 6);
-  set("clockHourHand", hour * 30);
+/** "H:MM:SS" for the time since clock-in, e.g. "6:24:18". */
+function formatElapsed(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h}:${pad2(m)}:${pad2(s)}`;
 }
 
-/** Draw the 12 tick marks on the punch-button clock face. */
-function buildClockTicks() {
-  if (typeof document.createElementNS !== "function") return;
-  const g = $("clockTicks");
-  if (!g) return;
-  const NS = "http://www.w3.org/2000/svg";
-  for (let i = 0; i < 12; i++) {
-    const a = (i * 30 * Math.PI) / 180;
-    const r1 = i % 3 === 0 ? 38 : 40.5;
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("x1", String(50 + r1 * Math.sin(a)));
-    line.setAttribute("y1", String(50 - r1 * Math.cos(a)));
-    line.setAttribute("x2", String(50 + 44 * Math.sin(a)));
-    line.setAttribute("y2", String(50 - 44 * Math.cos(a)));
-    g.appendChild(line);
-  }
+/** Seconds since the open shift started (floored clock-in time). */
+function openElapsedSeconds(now) {
+  const open = openShift();
+  if (!open) return null;
+  const startMins = parseHHMM(floorHHMM(open.clockIn));
+  const start = parseDateKey(open.date);
+  start.setHours(Math.floor(startMins / 60), startMins % 60, 0, 0);
+  return Math.max(0, Math.floor((now - start) / 1000));
+}
+
+/** Refresh the elapsed timer inside the punch button. */
+function updateElapsedTime(now) {
+  const el = $("elapsedTime");
+  if (!el || el.style.display === "none") return;
+  const secs = openElapsedSeconds(now);
+  if (secs !== null) el.textContent = formatElapsed(secs);
 }
 
 // ---------------------------------------------------------------------------
@@ -570,7 +561,7 @@ function tick() {
   if (clock) {
     clock.textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
   }
-  updateClockHands(now);
+  updateElapsedTime(now);
   const elapsed = $("elapsedValue");
   const open = openShift();
   if (elapsed && open) {
@@ -837,7 +828,6 @@ async function init() {
   viewMonth0 = now.getMonth();
   applyI18n();
   wireEvents();
-  buildClockTicks();
   route(); // open the tab named by the URL hash (default #home)
   renderAll();
   setInterval(tick, 1000);

@@ -59,6 +59,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
+  margin: 0 auto;
 }
 
 .punch-text {
@@ -67,12 +68,14 @@
   line-height: 1.1;
 }
 
-.punch-clock {
-  width: 92px;
-  height: 92px;
+.punch-elapsed {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
-.punch-btn.has-clock .punch-text {
+.punch-btn.has-elapsed .punch-text {
   font-size: 14px;
 }
 
