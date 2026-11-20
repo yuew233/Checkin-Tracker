@@ -263,6 +263,100 @@
   padding: 14px 0;
 }
 
+/* Settings */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-card .hint {
+  margin-top: 10px;
+}
+
+/* Trend chart */
+.chart-head {
+  padding: 0 0 6px;
+}
+
+.chart-wrap {
+  display: flex;
+  gap: 4px;
+}
+
+.chart-yaxis {
+  flex-shrink: 0;
+  width: 16px;
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 9px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-bars {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.chart-bar-area {
+  height: 104px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.chart-bar {
+  width: 72%;
+  max-width: 20px;
+  background: #9fb3c8;
+  border-radius: 3px 3px 0 0;
+}
+
+.chart-bar.empty {
+  background: var(--border);
+}
+
+.chart-bar.today,
+.chart-bar.selected {
+  background: var(--navy);
+}
+
+.chart-label {
+  height: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-label.today {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.chart-detail {
+  margin-top: 8px;
+  color: var(--navy);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Backup card */
 .backup-actions {
   display: flex;
