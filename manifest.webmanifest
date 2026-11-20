@@ -1,0 +1,1 @@
+{"background_color":"#eef0f2","description":"本地记录上下班时间、月平均和剩余每日平均。数据只保存在这台设备上。","display":"standalone","icons":[{"sizes":"any","src":"./assets/icons/icon.svg","type":"image/svg+xml"}],"lang":"zh-CN","name":"上下班打卡","orientation":"portrait","scope":"./","short_name":"打卡","start_url":"./index.html","theme_color":"#16324f"}

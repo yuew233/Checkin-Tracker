@@ -1,0 +1,1 @@
+{"description":"Static offline-first PWA for logging clock-in/out times. Data stays on the device.","name":"clock-in-pwa","private":true,"scripts":{"check":"node --check src/js/domain.js && node --check src/js/state.js && node --check src/js/i18n.js && node --check src/js/ui.js && node --check sw.js","serve":"python3 -m http.server 8000"},"type":"module","version":"1.0.0"}
