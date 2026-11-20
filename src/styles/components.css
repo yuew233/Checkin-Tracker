@@ -49,7 +49,7 @@
   color: #fff;
   font-size: 20px;
   font-weight: 700;
-  box-shadow: 0 3px 10px rgba(22, 50, 79, 0.18);
+  box-shadow: 0 3px 10px rgba(26, 26, 24, 0.18);
 }
 
 .punch-btn:active {
@@ -190,6 +190,32 @@
   font-size: 12px;
   text-decoration: underline;
   padding: 2px 0 0;
+}
+
+/* Range segmented control (RTO-style pill slider) */
+.segmented {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card-bg);
+}
+
+.seg-btn {
+  flex: 1;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.seg-btn.active {
+  background: var(--text);
+  color: var(--page-bg);
 }
 
 /* Month selector on the history tab */
@@ -360,7 +386,7 @@
 .chart-bar {
   width: 72%;
   max-width: 20px;
-  background: #9fb3c8;
+  background: #c9c2b2;
   border-radius: 3px 3px 0 0;
 }
 
@@ -384,6 +410,10 @@
 .chart-label.today {
   color: var(--navy);
   font-weight: 700;
+}
+
+.chart-col.weekend .chart-label {
+  opacity: 0.6;
 }
 
 .chart-detail {

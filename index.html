@@ -41,19 +41,6 @@
         </div>
         <div class="day-times" id="todayRecordTimes"></div>
       </div>
-    </section>
-
-    <!-- Tab 2: history & trend -->
-    <section class="tab-view" id="view-history" aria-label="history">
-      <div class="card month-nav-card">
-        <button id="monthPrev" class="step-btn" type="button" aria-label="‹">‹</button>
-        <span class="month-label-wrap">
-          <button id="monthLabelBtn" class="month-label-btn" type="button"></button>
-          <input id="monthPicker" type="month" aria-label="选择月份">
-        </span>
-        <button id="monthNext" class="step-btn" type="button" aria-label="›">›</button>
-        <button id="backToCurrentBtn" class="mini-btn" type="button" data-i18n="backToCurrentMonth" hidden>回到本月</button>
-      </div>
 
       <div class="card stats-card">
         <div class="stat-row">
@@ -82,6 +69,25 @@
             <button id="restoreAutoBtn" class="restore-btn" type="button" data-i18n="restoreAuto" hidden>恢复自动</button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: history & trend -->
+    <section class="tab-view" id="view-history" aria-label="history">
+      <div class="segmented" role="group" aria-label="范围">
+        <button id="rangeWeek" class="seg-btn" type="button" data-i18n="rangeWeek">周</button>
+        <button id="rangeMonth" class="seg-btn active" type="button" data-i18n="rangeMonth">月</button>
+        <button id="rangeAll" class="seg-btn" type="button" data-i18n="rangeAll">全部</button>
+      </div>
+
+      <div class="card month-nav-card" id="monthNavCard">
+        <button id="monthPrev" class="step-btn" type="button" aria-label="‹">‹</button>
+        <span class="month-label-wrap">
+          <button id="monthLabelBtn" class="month-label-btn" type="button"></button>
+          <input id="monthPicker" type="month" aria-label="选择月份">
+        </span>
+        <button id="monthNext" class="step-btn" type="button" aria-label="›">›</button>
+        <button id="backToCurrentBtn" class="mini-btn" type="button" data-i18n="backToCurrentMonth" hidden>回到本月</button>
       </div>
 
       <div class="card chart-card">
@@ -127,7 +133,7 @@
         <p class="hint" data-i18n="localOnlyNote">数据只保存在这台设备上，不会上传到任何服务器。建议定期导出备份。</p>
       </div>
 
-      <footer class="foot">Clock-in PWA · v1.2.0</footer>
+      <footer class="foot">Clock-in PWA · v1.3.0</footer>
     </section>
   </main>
 

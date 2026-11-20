@@ -68,7 +68,7 @@ main {
 }
 
 .tab-btn.active {
-  color: var(--navy);
+  color: var(--accent);
   font-weight: 700;
 }
 
