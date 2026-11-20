@@ -23,68 +23,118 @@
 <body>
   <header class="topbar">
     <h1 data-i18n="appTitle">上下班打卡</h1>
-    <div class="lang-toggle" role="group" aria-label="Language">
-      <button id="langZh" class="active" type="button">中文</button>
-      <button id="langEn" type="button">EN</button>
-    </div>
   </header>
 
   <main>
-    <section class="card punch-card" aria-label="punch">
-      <div class="today-line" id="todayLabel"></div>
-      <div class="live-clock" id="liveClock">--:--:--</div>
-      <button id="punchBtn" class="punch-btn punch-in" type="button"></button>
-      <div class="ongoing-line" id="ongoingLine" hidden></div>
-    </section>
-
-    <section class="card stats-card" aria-label="stats">
-      <div class="stat-row">
-        <span class="stat-label" id="monthLabel"></span>
-        <span class="big-number"><span id="monthAvgValue">0.0</span><span class="unit" id="monthAvgUnit"></span></span>
+    <!-- Tab 1: punch only -->
+    <section class="tab-view active" id="view-home" aria-label="punch">
+      <div class="card punch-card">
+        <div class="today-line" id="todayLabel"></div>
+        <div class="live-clock" id="liveClock">--:--:--</div>
+        <button id="punchBtn" class="punch-btn punch-in" type="button"></button>
+        <div class="ongoing-line" id="ongoingLine" hidden></div>
       </div>
-      <div class="attended" id="attendedValue"></div>
+      <div class="card today-record-card" id="todayRecordCard" hidden>
+        <div class="day-head">
+          <span class="day-date" id="todayRecordDate"></span>
+          <span class="day-hours" id="todayRecordHours"></span>
+        </div>
+        <div class="day-times" id="todayRecordTimes"></div>
+      </div>
     </section>
 
-    <section class="card forecast-card" aria-label="forecast">
-      <div class="forecast-grid">
-        <div class="forecast-main">
-          <span class="stat-label" data-i18n="forecastLabel">接下来每日平均</span>
-          <span class="big-number"><span id="forecastValue">—</span><span class="unit" id="forecastUnit"></span></span>
-          <div class="completed-avg" id="completedAvgValue"></div>
+    <!-- Tab 2: history & trend -->
+    <section class="tab-view" id="view-history" aria-label="history">
+      <div class="card stats-card">
+        <div class="stat-row">
+          <span class="stat-label" id="monthLabel"></span>
+          <span class="big-number"><span id="monthAvgValue">0.0</span><span class="unit" id="monthAvgUnit"></span></span>
         </div>
-        <div class="remaining-box">
-          <span class="stat-label" data-i18n="remainingDays">剩余上班天数</span>
-          <div class="remaining-controls">
-            <button id="remainingMinus" class="step-btn" type="button" aria-label="−">−</button>
-            <button id="remainingValue" class="remaining-value" type="button">0</button>
-            <input id="remainingInput" class="remaining-input" type="number" min="0" max="31" hidden>
-            <button id="remainingPlus" class="step-btn" type="button" aria-label="+">+</button>
+        <div class="attended" id="attendedValue"></div>
+      </div>
+
+      <div class="card forecast-card">
+        <div class="forecast-grid">
+          <div class="forecast-main">
+            <span class="stat-label" data-i18n="forecastLabel">接下来每日平均</span>
+            <span class="big-number"><span id="forecastValue">—</span><span class="unit" id="forecastUnit"></span></span>
+            <div class="completed-avg" id="completedAvgValue"></div>
           </div>
-          <div class="remaining-auto-note" id="remainingAutoNote"></div>
-          <button id="restoreAutoBtn" class="restore-btn" type="button" data-i18n="restoreAuto" hidden>恢复自动</button>
+          <div class="remaining-box">
+            <span class="stat-label" data-i18n="remainingDays">剩余上班天数</span>
+            <div class="remaining-controls">
+              <button id="remainingMinus" class="step-btn" type="button" aria-label="−">−</button>
+              <button id="remainingValue" class="remaining-value" type="button">0</button>
+              <input id="remainingInput" class="remaining-input" type="number" min="0" max="31" hidden>
+              <button id="remainingPlus" class="step-btn" type="button" aria-label="+">+</button>
+            </div>
+            <div class="remaining-auto-note" id="remainingAutoNote"></div>
+            <button id="restoreAutoBtn" class="restore-btn" type="button" data-i18n="restoreAuto" hidden>恢复自动</button>
+          </div>
         </div>
       </div>
-    </section>
 
-    <section class="history-section" aria-label="history">
-      <div class="section-head">
-        <h2 data-i18n="history">历史记录</h2>
-        <button id="addDayBtn" class="mini-btn" type="button" data-i18n="addDay">补录一天</button>
+      <div class="card chart-card">
+        <div class="section-head chart-head">
+          <h2 id="chartTitle"></h2>
+          <span class="stat-label" data-i18n="hoursUnit">小时</span>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-yaxis" aria-hidden="true"><span>12</span><span>8</span><span>4</span><span>0</span></div>
+          <div class="chart-bars" id="chartBars"></div>
+        </div>
+        <div class="chart-detail" id="chartDetail"></div>
       </div>
-      <div id="historyList" style="margin-top: 8px;"></div>
-    </section>
 
-    <section class="card backup-card" aria-label="backup">
-      <div class="backup-actions">
-        <button id="exportBtn" class="action-btn" type="button" data-i18n="exportBtn">导出备份</button>
-        <button id="importBtn" class="action-btn secondary" type="button" data-i18n="importBtn">导入备份</button>
-        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <div class="history-section">
+        <div class="section-head">
+          <h2 data-i18n="history">历史记录</h2>
+          <button id="addDayBtn" class="mini-btn" type="button" data-i18n="addDay">补录一天</button>
+        </div>
+        <div id="historyList" style="margin-top: 8px;"></div>
       </div>
-      <p class="hint" data-i18n="exportHint">数据只保存在这台设备上，记得定期导出备份。</p>
     </section>
 
-    <footer class="foot">Clock-in PWA · v1.0.0</footer>
+    <!-- Tab 3: settings -->
+    <section class="tab-view" id="view-settings" aria-label="settings">
+      <div class="card backup-card">
+        <div class="backup-actions">
+          <button id="exportBtn" class="action-btn" type="button" data-i18n="exportBtn">导出备份</button>
+          <button id="importBtn" class="action-btn secondary" type="button" data-i18n="importBtn">导入备份</button>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+        </div>
+        <p class="hint" data-i18n="exportHint">数据只保存在这台设备上，记得定期导出备份。</p>
+      </div>
+
+      <div class="card settings-card">
+        <div class="settings-row">
+          <span class="stat-label" data-i18n="language">语言</span>
+          <div class="lang-toggle" role="group" aria-label="Language">
+            <button id="langZh" class="active" type="button">中文</button>
+            <button id="langEn" type="button">EN</button>
+          </div>
+        </div>
+        <p class="hint" data-i18n="localOnlyNote">数据只保存在这台设备上，不会上传到任何服务器。建议定期导出备份。</p>
+      </div>
+
+      <footer class="foot">Clock-in PWA · v1.0.0</footer>
+    </section>
   </main>
+
+  <nav class="tabbar" aria-label="tabs">
+    <button type="button" class="tab-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span data-i18n="tabPunch">打卡</span>
+    </button>
+    <button type="button" class="tab-btn" data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20h16"/><path d="M7 20v-5"/><path d="M12 20V8"/><path d="M17 20v-8"/></svg>
+      <span data-i18n="tabHistory">历史与趋势</span>
+    </button>
+    <button type="button" class="tab-btn" data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></svg>
+      <span data-i18n="tabSettings">设置</span>
+    </button>
+  </nav>
 
   <dialog id="dayDialog">
     <form id="dialogForm" class="dialog-body">
